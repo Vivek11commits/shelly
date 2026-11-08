@@ -1,0 +1,322 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Happy Diwali Shelly ❤️</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+ background:#050516;
+ color:white;
+ font-family:Georgia,serif;
+ overflow:hidden;
+}
+canvas{
+ position:fixed;
+ inset:0;
+ width:100%;
+ height:100%;
+}
+.content{
+ position:relative;
+ z-index:2;
+ height:100vh;
+ display:flex;
+ flex-direction:column;
+ align-items:center;
+ justify-content:center;
+ text-align:center;
+ padding:20px;
+ pointer-events:none;
+}
+h1{
+ color:#ffd76a;
+ font-size:clamp(35px,8vw,75px);
+ text-shadow:0 0 25px orange;
+ margin-bottom:15px;
+}
+#wish{
+ max-width:650px;
+ font-size:clamp(17px,3vw,23px);
+ line-height:1.7;
+ color:#ffe9d0;
+ min-height:110px;
+ opacity:0;
+ transition:1s;
+}
+#wish.show{opacity:1}
+button{
+ pointer-events:auto;
+ padding:15px 35px;
+ border:1px solid gold;
+ border-radius:40px;
+ background:linear-gradient(45deg,#ff9d00,#ffe38b);
+ color:#411b00;
+ font-weight:bold;
+ font-size:17px;
+ cursor:pointer;
+ margin-top:25px;
+}
+#final{
+ font-size:clamp(35px,8vw,75px);
+ color:#ffe38a;
+ text-shadow:0 0 30px gold;
+}
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div class="content">
+ <h1 id="heading">🪔 Happy Diwali 🪔</h1>
+ <div id="wish">A little surprise is waiting for you, Shelly ❤️</div>
+ <button id="start">LIGHT THE ANAR ✨</button>
+</div>
+
+<script>
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
+
+let W,H,particles=[],rockets=[],running=false;
+const rand=(a,b)=>Math.random()*(b-a)+a;
+
+function resize(){
+ W=canvas.width=innerWidth*devicePixelRatio;
+ H=canvas.height=innerHeight*devicePixelRatio;
+ ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+ W=innerWidth;H=innerHeight;
+}
+resize();
+addEventListener("resize",resize);
+
+// Realistic glowing particle system
+class Particle{
+ constructor(x,y,vx,vy,color,size,life,gravity=.08){
+  Object.assign(this,{x,y,vx,vy,color,size,life,maxLife:life,gravity});
+ }
+ update(){
+  this.vy+=this.gravity;
+  this.vx*=.992;
+  this.vy*=.992;
+  this.x+=this.vx;
+  this.y+=this.vy;
+  this.life--;
+ }
+ draw(){
+  let alpha=Math.max(0,this.life/this.maxLife);
+  ctx.globalAlpha=alpha;
+  ctx.shadowBlur=18;
+  ctx.shadowColor=this.color;
+  ctx.fillStyle=this.color;
+  ctx.beginPath();
+  ctx.arc(this.x,this.y,this.size*alpha,0,Math.PI*2);
+  ctx.fill();
+  ctx.globalAlpha=1;
+  ctx.shadowBlur=0;
+ }
+}
+
+// Anar fountain
+let anarActive=false;
+function anar(){
+ anarActive=true;
+ let x=W/2,y=H*.78;
+
+ let timer=setInterval(()=>{
+  for(let i=0;i<15;i++){
+   let angle=rand(-Math.PI*.9,-Math.PI*.1);
+   let speed=rand(3,11);
+   particles.push(new Particle(
+    x+rand(-3,3),y,
+    Math.cos(angle)*speed,
+    Math.sin(angle)*speed,
+    Math.random()>.3?"#ffca43":"#fff1b0",
+    rand(1,3),rand(35,85),.13
+   ));
+  }
+ },35);
+
+ setTimeout(()=>{
+  clearInterval(timer);
+  anarActive=false;
+ },4500);
+}
+
+// Large fireworks explosion
+function explode(x,y,big=false){
+ const colors=["#ffd700","#ff3b7b","#40eaff",
+ "#ff7b24","#ffffff","#ad75ff"];
+
+ let count=big?230:110;
+ let color=colors[Math.floor(Math.random()*colors.length)];
+
+ for(let i=0;i<count;i++){
+  let angle=Math.PI*2*i/count+rand(-.03,.03);
+  let speed=rand(2,big?10:7);
+  particles.push(new Particle(
+   x,y,
+   Math.cos(angle)*speed,
+   Math.sin(angle)*speed,
+   colors[Math.floor(Math.random()*colors.length)],
+   rand(1,3),rand(55,110),.055
+  ));
+ }
+
+ // Initial bright flash
+ particles.push(new Particle(x,y,0,0,"#ffffff",big?35:20,8,0));
+}
+
+// Rocket launching into the sky
+class Rocket{
+ constructor(targetX,targetY){
+  this.x=rand(W*.25,W*.75);
+  this.y=H+10;
+  this.tx=targetX;
+  this.ty=targetY;
+  this.speed=rand(7,10);
+  this.done=false;
+ }
+ update(){
+  let dx=this.tx-this.x;
+  let dy=this.ty-this.y;
+  let d=Math.hypot(dx,dy);
+  if(d<this.speed+5){
+   this.done=true;
+   explode(this.x,this.y,true);
+  }else{
+   this.x+=dx/d*this.speed;
+   this.y+=dy/d*this.speed;
+   particles.push(new Particle(
+    this.x,this.y,rand(-.5,.5),rand(1,3),
+    "#ffbd43",2,20,.02
+   ));
+  }
+ }
+ draw(){
+  ctx.shadowBlur=20;
+  ctx.shadowColor="#ffb52e";
+  ctx.fillStyle="#fff3a5";
+  ctx.beginPath();
+  ctx.arc(this.x,this.y,3,0,Math.PI*2);
+  ctx.fill();
+  ctx.shadowBlur=0;
+ }
+}
+
+// Background stars
+let stars=Array.from({length:130},()=>({
+ x:Math.random()*W,
+ y:Math.random()*H,
+ r:rand(.5,1.8),
+ a:Math.random()
+}));
+
+function drawStars(){
+ stars.forEach(s=>{
+  ctx.globalAlpha=.4+Math.sin(Date.now()*.002+s.a*10)*.3;
+  ctx.fillStyle="#fff";
+  ctx.beginPath();
+  ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+  ctx.fill();
+ });
+ ctx.globalAlpha=1;
+}
+
+function animate(){
+ ctx.fillStyle="rgba(5,5,22,.20)";
+ ctx.fillRect(0,0,W,H);
+ drawStars();
+
+ particles.forEach((p,i)=>{
+  p.update();
+  p.draw();
+  if(p.life<=0)particles.splice(i,1);
+ });
+
+ rockets.forEach((r,i)=>{
+  r.update();
+  r.draw();
+  if(r.done)rockets.splice(i,1);
+ });
+
+ // Random distant fireworks after the show begins
+ if(running && Math.random()<.025){
+  explode(rand(40,W-40),rand(40,H*.45));
+ }
+
+ requestAnimationFrame(animate);
+}
+animate();
+
+const wish=document.getElementById("wish");
+const heading=document.getElementById("heading");
+const button=document.getElementById("start");
+
+function message(title,description){
+ heading.textContent=title;
+ wish.textContent=description;
+ wish.classList.remove("show");
+ void wish.offsetWidth;
+ wish.classList.add("show");
+}
+
+function launchSkyshot(){
+ for(let i=0;i<8;i++){
+  setTimeout(()=>{
+   rockets.push(new Rocket(rand(W*.15,W*.85),rand(H*.12,H*.48)));
+  },i*350);
+ }
+}
+
+// Complete Diwali sequence
+button.onclick=()=>{
+ if(running)return;
+ running=true;
+ button.style.display="none";
+
+ message("A little sparkle for you ✨",
+ "Shelly, may your life always shine with happiness. May every new day bring you beautiful opportunities and countless reasons to smile.");
+
+ anar();
+
+ setTimeout(()=>{
+  explode(W/2,H*.45,true);
+  message("BOOOOOOM! 💥",
+  "May every little dream in your heart find its way to reality. May your days be filled with laughter, peace and unforgettable memories.");
+ },5500);
+
+ setTimeout(()=>{
+  for(let i=0;i<4;i++){
+   setTimeout(()=>explode(rand(W*.2,W*.8),rand(H*.2,H*.55),true),i*350);
+  }
+  message("A wish just for Shelly ❤️",
+  "You deserve all the beautiful things this world has to offer. Keep smiling, keep shining and never stop believing in your dreams.");
+ },9500);
+
+ setTimeout(()=>{
+  launchSkyshot();
+  message("Look at the sky, Shelly! 🎆",
+  "May your future be as bright as these fireworks, your happiness as endless as the stars, and your life as colorful as this beautiful night.");
+ },13500);
+
+ setTimeout(()=>{
+  for(let i=0;i<15;i++){
+   setTimeout(()=>{
+    rockets.push(new Rocket(rand(W*.1,W*.9),rand(H*.1,H*.5)));
+   },i*250);
+  }
+
+  setTimeout(()=>{
+   heading.id="final";
+   message("HAPPY DIWALI SHELLY! ❤️🪔",
+   "May this Diwali bring you endless happiness, beautiful beginnings, sweet memories and a thousand reasons to smile. Keep glowing, Shelly. You are special! ✨");
+  },3500);
+
+ },17500);
+};
+</script>
+</body>
+</html>
